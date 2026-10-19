@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>중화 반응 연구소</title>
+<script src="presets.js"></script>
+<script>
+  // QR 짧은 주소 : q.html?254  →  index.html?t=B3&q=254
+  (function () {
+    var code = decodeURIComponent((location.search || "").replace(/^\?/, "").split("&")[0]).toLowerCase();
+    var hit = (window.PRESETS || []).filter(function (p) { return p.code.toLowerCase() === code; })[0];
+    location.replace(hit ? "index.html?t=" + hit.type + "&q=" + encodeURIComponent(hit.code) : "index.html");
+  })();
+</script>
+</head>
+<body style="font-family:sans-serif;padding:24px">이동 중… <a href="index.html">중화 반응 연구소</a></body>
+</html>

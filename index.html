@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>중화 반응 연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./">중화 반응 연구소</a>
+  <span class="sub">통합과학2 · 산과 염기</span>
+</header>
+
+<main id="home" class="home">
+  <section class="hero">
+    <h1>중화 반응 시뮬레이션</h1>
+    <p>유형을 고르면 <b>기본 시뮬레이션</b>으로 원리를 보고, <b>문제 상황</b>에서 학습지 문제의 실제 모습을 확인할 수 있어요.</p>
+  </section>
+  <h2 class="group-title">기본 유형</h2>
+  <div class="cards" id="cards-basic"></div>
+  <h2 class="group-title teal">심화 유형</h2>
+  <div class="cards" id="cards-adv"></div>
+</main>
+
+<main id="view" class="view" hidden>
+  <div class="view-head">
+    <button class="back" id="back">← 유형 목록</button>
+    <div class="view-title"><span class="chip" id="vchip"></span><h1 id="vtitle"></h1></div>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="basic">기본 시뮬레이션</button>
+    <button class="tab" data-tab="prob">문제 상황</button>
+  </nav>
+  <section id="tab-basic" class="tabpane"></section>
+  <section id="tab-prob" class="tabpane" hidden>
+    <div class="plist" id="plist"></div>
+    <div id="pview"></div>
+  </section>
+</main>
+
+<footer class="foot">제일학원 · 중화 반응 연구소</footer>
+<script src="presets.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
