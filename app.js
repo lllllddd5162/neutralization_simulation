@@ -113,6 +113,36 @@ function drawBeaker(ctx, x, y, w, hh, liquid, label) {
   if (label) { ctx.fillStyle = "#5d6878"; ctx.font = "12px Noto Sans KR, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillText(label, x + w / 2, lt + 15); }
   return { x, y: lt, w, h: y + hh - lt };
 }
+/* 정렬 배치 : 이온 종류별로 한 줄씩, 많으면 아이콘 1개 + "× 수" */
+const MAXI = 8;
+const ORDER_SYM = ["tri", "ftri", "sq", "fsq", "circ", "fcirc", "star", "diam"];
+function groupItems(counts, filter, sym, water) {
+  const keys = Object.keys(counts).filter(k => counts[k] > EPS && isShown(k, filter));
+  const rank = k => k === "H" ? 0 : k === "OH" ? 1 : ION[k].q > 0 ? 2 : 3;
+  keys.sort((a, b) => (sym && sym[a] && sym[b]) ? ORDER_SYM.indexOf(sym[a]) - ORDER_SYM.indexOf(sym[b]) : rank(a) - rank(b));
+  const items = keys.map(k => ({ k, n: counts[k] }));
+  if (water > EPS && filter === "all") items.push({ k: "W", n: water });
+  return items;
+}
+function layoutGroups(box, items) {
+  const rows = Math.max(1, items.length), rowH = Math.min(38, box.h / rows), r = Math.max(7, Math.min(12, rowH * .36));
+  const y0 = box.y + (box.h - rows * rowH) / 2 + rowH / 2, gap = 2.6 * r;
+  return items.map((it, i) => {
+    const y = y0 + i * rowH, m = Math.round(it.n);
+    const indiv = Math.abs(it.n - m) < 1e-6 && m <= MAXI && 16 + 2 * r + (m - 1) * gap <= box.w - 8;
+    const pts = indiv ? Array.from({ length: m }, (_, j) => ({ x: box.x + 16 + r + j * gap, y })) : [{ x: box.x + 16 + r, y }];
+    return { k: it.k, n: it.n, indiv, pts, r, y };
+  });
+}
+function drawGroups(ctx, G, sym, unit, alpha = 1, skip) {
+  G.forEach(g => {
+    if (skip && skip(g)) return;
+    ctx.save(); ctx.globalAlpha = alpha;
+    g.pts.forEach(p => drawIon(ctx, g.k, p.x, p.y, g.r * (g.k === "W" ? 1.3 : 1), sym));
+    if (!g.indiv) { ctx.fillStyle = "#1d2530"; ctx.font = "700 14px Noto Sans KR, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText("× " + fmt(g.n, unit), g.pts[0].x + g.r * 1.7, g.y + .5); }
+    ctx.restore();
+  });
+}
 function layoutCells(n, box, seed, top = 0) {
   const ratio = box.w / Math.max(1, box.h - top);
   let cols = Math.max(1, Math.ceil(Math.sqrt(n * ratio))), rows = Math.ceil(n / cols);
@@ -158,36 +188,26 @@ class MixView {
     this.note = h("div", { class: "note" }); this.el.append(this.note);
     this.draw();
   }
-  particlesFor(c, state) {
+  itemsFor(c, state, symNow) {
     const counts = state === "after" ? c.res.after : c.res.before;
-    const f = scaleFor(Object.values(c.res.before));
-    const list = [];
-    for (const k of Object.keys(counts)) { const n = Math.round(counts[k] * f); for (let i = 0; i < n; i++) list.push(k); }
-    if (state === "after" && this.o.water) for (let i = 0; i < Math.round(c.res.water * f); i++) list.push("W");
-    return { list, f };
+    return groupItems(counts, this.filter, symNow, state === "after" && this.o.water ? c.res.water : 0);
   }
-  draw(anim) {
-    const symNow = this.useSym ? this.o.sym : null;
-    let maxF = 1; const legendIons = new Set();
+  draw() {
+    const symNow = this.useSym ? this.o.sym : null; const legendIons = new Set();
     this.cards.forEach(c => {
       const ctx = c.ctx; ctx.clearRect(0, 0, ctx.W, ctx.H);
       const liqNow = this.state === "after" ? c.res.liq : null;
       const col = this.btb ? (this.state === "after" ? BTB[c.res.liq] : "#e9f0e6") : "#e6f0f8";
       const box = drawBeaker(ctx, 24, 14, ctx.W - 48, ctx.H - 26, col);
-      const { list: all, f } = this.particlesFor(c, this.state === "after" ? "after" : "before"); maxF = Math.max(maxF, f);
-      const shown = all.filter(k => k === "W" ? this.filter === "all" : isShown(k, this.filter));
-      if (shown.length > 90) { ctx.fillStyle = "#5d6878"; ctx.font = "13px Noto Sans KR, sans-serif"; ctx.textAlign = "center"; ctx.fillText("입자가 많아 모형을 생략했어요", ctx.W / 2, box.y + box.h / 2); }
-      else {
-        const L = layoutCells(shown.length, { x: box.x + 6, y: box.y + 6, w: box.w - 12, h: box.h - 12 }, c.seed);
-        shown.forEach((k, i) => { if (k !== "W") legendIons.add(k); drawIon(ctx, k, L.pos[i].x, L.pos[i].y, L.rad, symNow); });
-        c.layout = { L, shown };
-      }
+      c.box = { x: box.x + 4, y: box.y + 4, w: box.w - 8, h: box.h - 8 };
+      const G = layoutGroups(c.box, this.itemsFor(c, this.state, symNow));
+      drawGroups(ctx, G, symNow, this.o.unit);
+      G.forEach(g => g.k !== "W" && legendIons.add(g.k));
       c.info.innerHTML = this.o.showTable ? this.table(c.res) : (liqNow ? `<div class="note">액성 ${liqBadge(liqNow)}</div>` : "");
     });
     this.legend.innerHTML = symNow ? "" : [...legendIons].map(k => `<span><i style="background:${ION[k].c}"></i>${ION[k].l}</span>`).join("");
-    this.note.innerHTML = (Math.abs(maxF - 1) > EPS ? `입자 1개 = ${frac(1 / maxF)}${this.o.unit || "개"}로 나타냈어요. ` : "") +
-      (this.state === "before" ? "지금은 <b>반응 전</b>(이온화만 된 상태)이에요. ▶ 반응 시작을 눌러 보세요." : "<b>반응 후</b> 모습이에요. H⁺과 OH⁻이 1 : 1로 만나 물(H₂O)이 되었어요.") +
-      (symNow ? " 기호 모형을 끄면 이온 이름이 보여요." : "");
+    this.note.innerHTML = (this.state === "before" ? "지금은 <b>반응 전</b>(이온화만 된 상태)이에요. ▶ 반응 시작을 눌러 보세요." : "<b>반응 후</b> 모습이에요. H⁺과 OH⁻이 1 : 1로 만나 물(H₂O)이 되었어요.") +
+      ` 이온은 종류별로 한 줄씩 놓았고, ${MAXI}개가 넘거나 정수가 아니면 '× 수'로 줄여 나타냈어요.` + (symNow ? " 기호 모형을 끄면 이온 이름이 보여요." : "");
   }
   table(r) {
     const u = this.o.unit, keys = ["H", "OH", ...r.order.filter(k => k !== "H" && k !== "OH")];
@@ -204,32 +224,30 @@ class MixView {
   }
   run() {
     if (this.busy) return; this.state = "before"; this.draw(); this.busy = true; this.bStart.disabled = true;
-    const symNow = this.useSym ? this.o.sym : null;
+    const symNow = this.useSym ? this.o.sym : null, u = this.o.unit;
     const plan = this.cards.map(c => {
-      if (!c.layout) return null;
-      const { L, shown } = c.layout;
-      const Hs = shown.map((k, i) => k === "H" ? i : -1).filter(i => i >= 0), Os = shown.map((k, i) => k === "OH" ? i : -1).filter(i => i >= 0);
-      const f = scaleFor(Object.values(c.res.before));
-      const nr = Math.round(c.res.water * f);
-      const pairs = []; for (let i = 0; i < Math.min(nr, Hs.length, Os.length); i++) pairs.push([Hs[i], Os[i]]);
-      return { c, L, shown, pairs };
+      const G0 = layoutGroups(c.box, this.itemsFor(c, "before", symNow)), G1 = layoutGroups(c.box, this.itemsFor(c, "after", symNow));
+      const gH = G0.find(g => g.k === "H"), gO = G0.find(g => g.k === "OH");
+      const nr = c.res.water, mid = gH && gO ? { x: c.box.x + c.box.w * .72, y: (gH.y + gO.y) / 2 } : null;
+      const movers = [];
+      [gH, gO].forEach(g => { if (!g) return; if (g.indiv) g.pts.slice(0, Math.round(nr)).forEach(p => movers.push({ k: g.k, p, r: g.r })); else movers.push({ k: g.k, p: g.pts[0], r: g.r, whole: true }); });
+      return { c, G0, G1, gH, gO, nr, mid, movers };
     });
-    const t0 = performance.now(), D = 1100;
+    const t0 = performance.now(), D = 1400;
     const step = now => {
-      const t = Math.min(1, (now - t0) / D), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      const t = Math.min(1, (now - t0) / D), t1 = Math.min(1, t / .6), e = t1 < .5 ? 2 * t1 * t1 : 1 - Math.pow(-2 * t1 + 2, 2) / 2;
       plan.forEach(p => {
-        if (!p) return; const ctx = p.c.ctx; ctx.clearRect(0, 0, ctx.W, ctx.H);
-        const col = this.btb ? "#e9f0e6" : "#e6f0f8";
-        drawBeaker(ctx, 24, 14, ctx.W - 48, ctx.H - 26, col);
-        const moving = new Set(p.pairs.flat());
-        p.shown.forEach((k, i) => { if (!moving.has(i)) drawIon(ctx, k, p.L.pos[i].x, p.L.pos[i].y, p.L.rad, symNow); });
-        p.pairs.forEach(([a, b]) => {
-          const A = p.L.pos[a], B = p.L.pos[b], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2;
-          if (t < .85) {
-            drawIon(ctx, "H", A.x + (mx - A.x) * e, A.y + (my - A.y) * e, p.L.rad, symNow);
-            drawIon(ctx, "OH", B.x + (mx - B.x) * e, B.y + (my - B.y) * e, p.L.rad, symNow);
-          } else drawIon(ctx, "W", mx, my, p.L.rad * 1.2);
-        });
+        const ctx = p.c.ctx; ctx.clearRect(0, 0, ctx.W, ctx.H);
+        drawBeaker(ctx, 24, 14, ctx.W - 48, ctx.H - 26, this.btb ? (t > .6 ? BTB[p.c.res.liq] : "#e9f0e6") : "#e6f0f8");
+        if (t <= .6 || !p.mid) {
+          const moving = new Set(p.movers.map(m => m.p));
+          p.G0.forEach(g => { ctx.save(); g.pts.forEach(q => { if (!moving.has(q)) drawIon(ctx, g.k, q.x, q.y, g.r, symNow); }); if (!g.indiv && !(p.mid && (g.k === "H" || g.k === "OH"))) { ctx.fillStyle = "#1d2530"; ctx.font = "700 14px Noto Sans KR, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText("× " + fmt(g.n, u), g.pts[0].x + g.r * 1.7, g.y + .5); } ctx.restore(); });
+          if (p.mid) p.movers.forEach(m => { ctx.save(); ctx.globalAlpha = 1 - .7 * e; drawIon(ctx, m.k, m.p.x + (p.mid.x - m.p.x) * e, m.p.y + (p.mid.y - m.p.y) * e, m.r * (1 - .3 * e), symNow); ctx.restore(); });
+        } else {
+          const a = (t - .6) / .4;
+          drawGroups(ctx, p.G1, symNow, u, .25 + .75 * a);
+          ctx.save(); ctx.globalAlpha = 1 - a; drawIon(ctx, "W", p.mid.x, p.mid.y, 14); ctx.restore();
+        }
       });
       if (t < 1) requestAnimationFrame(step);
       else { this.state = "after"; this.busy = false; this.bStart.disabled = false; this.draw(); }
@@ -271,7 +289,6 @@ class TitView {
   render() {
     const o = this.o, sts = this.states(), symNow = this.useSym ? o.sym : null; this.row.innerHTML = "";
     const res = sts.map(s => mix(s.parts));
-    const f = scaleFor([Math.max(...res.map(r => r.totalBefore))].concat(res.flatMap(r => Object.values(r.before))), 45);
     const seen = new Set();
     sts.forEach((s, i) => {
       const r = res[i], card = h("div", { class: "mix" });
@@ -279,9 +296,8 @@ class TitView {
       card.innerHTML = `<div class="mh"><span class="ml">${o.labels[i] || ""}</span><span class="mc">${desc}</span></div>`;
       const ctx = mkCanvas(card, 300, 190);
       const box = drawBeaker(ctx, 24, 12, ctx.W - 48, ctx.H - 22, "#e6f0f8");
-      const list = [];
-      for (const k of Object.keys(r.after)) { if (!isShown(k, this.filter)) continue; const n = Math.round(r.after[k] * f); for (let j = 0; j < n; j++) list.push(k); }
-      if (list.length <= 90) { const L = layoutCells(list.length, { x: box.x + 6, y: box.y + 6, w: box.w - 12, h: box.h - 12 }, 11 + i * 17); list.forEach((k, j) => { seen.add(k); drawIon(ctx, k, L.pos[j].x, L.pos[j].y, L.rad, symNow); }); }
+      const G = layoutGroups({ x: box.x + 4, y: box.y + 4, w: box.w - 8, h: box.h - 8 }, groupItems(r.after, this.filter, symNow, 0));
+      drawGroups(ctx, G, symNow, o.unit); G.forEach(g => seen.add(g.k));
       card.append(h("div", { class: "note" }, `액성 ${liqBadge(r.liq)}`));
       this.row.append(card);
     });
@@ -291,7 +307,7 @@ class TitView {
       ions.filter(k => isShown(k, this.filter) && res.some(r => (r.after[k] || 0) > EPS)).map(k => `<tr><td>${symNow && symNow[k] ? symLabel(symNow[k]) : ION[k].l}</td>${res.map(r => `<td>${fmt(r.after[k] || 0, u)}</td>`).join("")}</tr>`).join("") +
       `<tr class="sum"><td>생성된 물</td>${res.map(r => `<td>${fmt(r.water, u)}</td>`).join("")}</tr></table>`;
     this.legend.innerHTML = symNow ? "" : [...seen].map(k => `<span><i style="background:${ION[k].c}"></i>${ION[k].l}</span>`).join("");
-    this.note.innerHTML = (Math.abs(f - 1) > EPS ? `입자 1개 = ${frac(1 / f)}${u || "개"}로 나타냈어요. ` : "") + "줄어드는 이온은 알짜 이온(H⁺ 또는 OH⁻), 그대로인 이온은 처음 용액의 구경꾼 이온, 새로 늘어나는 이온은 넣어 준 용액의 구경꾼 이온이에요.";
+    this.note.innerHTML = "이온은 종류별로 한 줄씩 놓았어요(많으면 '× 수'). 줄어드는 이온은 알짜 이온(H⁺ 또는 OH⁻), 그대로인 이온은 처음 용액의 구경꾼 이온, 새로 늘어나는 이온은 넣어 준 용액의 구경꾼 이온이에요.";
   }
 }
 const symLabel = k => ({ tri: "△", ftri: "▲", sq: "□", fsq: "■", circ: "○", fcirc: "●", star: "☆", diam: "◇" }[k] || k);
