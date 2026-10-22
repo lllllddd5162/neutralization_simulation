@@ -115,6 +115,28 @@
     hint: ["물 ∝ 적은 쪽 부피 : 3, 5, 2 → (나) > (가) > (다)."],
     views: [{ k: "temp", title: "최고 온도", mode: "series", acid: { s: "HCl", conc: 1 }, base: { s: "NaOH", conc: 1 }, points: [[3, 7, "(가)"], [5, 5, "(나)"], [8, 2, "(다)"]], tk: 20 }] });
 
+  /* ===================== 기본 유형 5 (이온 수 그래프) ===================== */
+  add({ type: "B5", code: "194", o: true, src: "빈출", no: "194", title: "NaOH에 HCl을 넣을 때 이온 수 A~D",
+    text: "일정량의 NaOH 수용액에 묽은 염산을 조금씩 넣을 때 혼합 용액에 존재하는 이온 수 그래프예요. (가)는 A와 C가 만나는 점, (나)는 A가 0이 되는 점이에요.",
+    hint: ["일정한 B = Na⁺, 감소해 0이 되는 A = OH⁻.", "0에서 계속 증가하는 C = Cl⁻, (나) 이후 증가하는 D = H⁺.", "(가) : OH⁻이 남아 염기성 → 파란색. (나) : 중화점 → 초록색."],
+    views: [{ k: "count", title: "이온 수 그래프 (이름 가리기 가능)", init: { s: "NaOH", n: 2 }, add: { s: "HCl", conc: .2 }, max: 17.5, ticks: [0, 5, 10], tickLabels: { 5: "(가)", 10: "(나)" }, names: { Na: "B", OH: "A", Cl: "C", H: "D" }, start: 5 }] });
+  add({ type: "B5", code: "s5-1", no: "5-1", title: "KOH에 HNO₃를 넣을 때", unit: "N",
+    text: "KOH 수용액에 HNO₃ 수용액을 조금씩 넣을 때 이온 A~D의 수예요. 20 mL에서 B가 0이 돼요.",
+    hint: ["A(일정) = K⁺, B(감소) = OH⁻, C(증가) = NO₃⁻, D(20 mL 뒤) = H⁺.", "10 mL : OH⁻ N이 남아 염기성.", "30 mL : 6N, 처음 4N → 3/2배."],
+    views: [{ k: "count", title: "이온 수 그래프", init: { s: "KOH", n: 2 }, add: { s: "HNO3", conc: .1 }, max: 34, ticks: [0, 10, 20, 30], names: { K: "A", OH: "B", NO3: "C", H: "D" }, start: 10 }] });
+  add({ type: "B5", code: "s5-2", no: "5-2", title: "HCl 20 mL에 NaOH를 넣을 때", unit: "N",
+    text: "HCl 수용액 20 mL에 NaOH 수용액을 조금씩 넣을 때 이온 A~D의 수예요. 10 mL에서 B가 0이 돼요.",
+    hint: ["A(일정) = Cl⁻ 4N, B(감소) = H⁺, C(증가) = Na⁺, D(10 mL 뒤) = OH⁻.", "5 mL : H⁺ 2N = Na⁺ 2N.", "15 mL : 음이온 6N = 양이온 6N."],
+    views: [{ k: "count", title: "이온 수 그래프", init: { s: "HCl", vol: 20, n: 4 }, add: { s: "NaOH", conc: .4 }, max: 18, ticks: [0, 5, 10, 15], names: { Cl: "A", H: "B", Na: "C", OH: "D" }, start: 5 }] });
+  add({ type: "B5", code: "s5-3", no: "5-3", title: "전체 이온 수 그래프 고르기",
+    text: "NaOH 수용액에 HCl 수용액을 넣을 때 혼합 용액의 전체 이온 수 그래프예요. V mL에서 완전히 중화돼요.",
+    hint: ["중화점까지 사라진 OH⁻ 자리를 Cl⁻이 1 : 1로 채워 일정.", "중화점 뒤에는 H⁺과 Cl⁻이 함께 늘어 증가."],
+    views: [{ k: "count", title: "전체 이온 수 (이온별 선도 켜 보세요)", init: { s: "NaOH", n: 2 }, add: { s: "HCl", conc: .2 }, max: 20, ticks: [0, 10, 20], tickLabels: { 10: "V" }, series: ["total"], start: 10 }] });
+  add({ type: "B5", code: "s5-4", no: "5-4", title: "HCl에 KOH를 넣을 때 이온 수 A~D",
+    text: "일정량의 HCl 수용액에 KOH 수용액을 조금씩 넣을 때 이온 수 그래프예요. (가)는 B와 C가 만나는 점, (나)는 D 위의 점이에요.",
+    hint: ["A(일정) = Cl⁻, B(감소) = H⁺, C(증가) = K⁺, D(중화점 뒤) = OH⁻.", "(가) : H⁺이 남아 산성 → 노란색.", "(나) : OH⁻이 남아 염기성 → 파란색."],
+    views: [{ k: "count", title: "이온 수 그래프 (이름 가리기 가능)", init: { s: "HCl", n: 2 }, add: { s: "KOH", conc: .2 }, max: 17.5, ticks: [0, 5, 10, 15], tickLabels: { 5: "(가)", 15: "(나)" }, names: { Cl: "A", H: "B", K: "C", OH: "D" }, start: 5 }] });
+
   /* ===================== 심화 유형 1 ===================== */
   add({ type: "H1", code: "267", o: true, no: "267", title: "HA + NaOH, Na⁺ 수와 물 수", unit: "N",
     text: "HA 수용액과 NaOH 수용액을 섞은 (가) HA 10 · NaOH 2a, (나) HA a · NaOH 15 mL. Na⁺ 수는 2N, 3N이고 물 수는 bN으로 같아요.",
@@ -206,6 +228,19 @@
     hint: ["(나) 염기성 → Y(OH)₂ 40 mL 이온 수 12 → Y(OH)₂ [1개/10 mL].", "(가) 산성 → 2 × HCl − Y²⁺ 1 = 7 → HCl 4개/20 mL.", "(다) 중성 → V = 30. (나) : Cl⁻ 4 = Y²⁺ 4."],
     views: [{ k: "mix", title: "(가)~(다)", mixes: [M("(가)", [p("HCl", 20, 4), p("YOH2", 10, 1)]), M("(나)", [p("HCl", 20, 4), p("YOH2", 40, 4)]), M("(다)", [p("HCl", 30, 6), p("YOH2", 30, 3)])], btb: true },
       { k: "box", title: "칸 그림 — (가)", acid: { s: "HCl", n: 4 }, base: { s: "YOH2", n: 1 } }] });
+
+  add({ type: "H3", code: "ds12", o: true, src: "도선고 기출", no: "12", title: "염기 X에 염산을 넣을 때 이온의 상대적인 수",
+    text: "어떤 염기 X 수용액에 묽은 염산을 넣을 때 이온의 상대적인 수 그래프예요. 일정한 선은 1, 감소하는 선은 2에서 시작해 b에서 0이 되고, c에서 H⁺은 1이에요.",
+    hint: ["처음 OH⁻ 2 : 구경꾼 양이온 1 → X(OH)₂ (2가 염기).", "원점에서 증가하는 (가) = Cl⁻. a는 중화점 b의 절반이라 아직 염기성.", "양이온 : b에서 X²⁺ 1, c에서 X²⁺ 1 + H⁺ 1 = 2."],
+    views: [{ k: "count", title: "이온의 상대적인 수", init: { s: "XOH2", n: 1 }, add: { s: "HCl", conc: .1 }, max: 36, ticks: [0, 10, 20, 30], tickLabels: { 10: "a", 20: "b", 30: "c" }, names: { Cl: "(가)" }, start: 10 }] });
+  add({ type: "H3", code: "h3-5", no: "심화 3-5", title: "Ca(OH)₂에 HNO₃를 넣을 때", unit: "N",
+    text: "Ca(OH)₂ 수용액에 HNO₃ 수용액을 조금씩 넣을 때 이온 A~D의 수예요. A는 2N, B는 4N에서 시작해 40 mL에서 0이 돼요.",
+    hint: ["A(일정) = Ca²⁺, B(감소) = OH⁻ (2 : 1 → 2가 염기).", "20 mL : NO₃⁻ 2N = Ca²⁺ 2N, 하지만 OH⁻ 2N이 남아 염기성.", "A와 C가 만나는 점 = 중화점의 절반."],
+    views: [{ k: "count", title: "이온 수 그래프", init: { s: "CaOH2", n: 2 }, add: { s: "HNO3", conc: .1 }, max: 56, ticks: [0, 20, 40], names: { Ca: "A", OH: "B", NO3: "C", H: "D" }, start: 20 }] });
+  add({ type: "H3", code: "h3-6", no: "심화 3-6", title: "H₂SO₄에 NaOH를 넣을 때 이온의 상대적인 수",
+    text: "H₂SO₄ 수용액에 NaOH 수용액을 넣을 때 이온의 상대적인 수 그래프예요. 일정한 선은 1, 감소하는 선은 2에서 시작해 b에서 0이 돼요.",
+    hint: ["일정 = SO₄²⁻, 감소 = H⁺ (2 : 1 → 2가 산), 원점에서 증가하는 (가) = Na⁺.", "a : SO₄²⁻ 1, H⁺ 1, Na⁺ 1.", "c : 양이온 Na⁺ 3, 음이온 SO₄²⁻ 1 + OH⁻ 1 = 2."],
+    views: [{ k: "count", title: "이온의 상대적인 수", init: { s: "H2SO4", n: 1 }, add: { s: "NaOH", conc: .1 }, max: 36, ticks: [0, 10, 20, 30], tickLabels: { 10: "a", 20: "b", 30: "c" }, names: { Na: "(가)" }, start: 30 }] });
 
   /* ===================== 심화 유형 4 (단위 부피당) ===================== */
   add({ type: "H4", code: "290", o: true, no: "290", title: "단위 부피당 Na⁺ · Cl⁻ 수",
