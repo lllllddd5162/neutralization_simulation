@@ -159,7 +159,7 @@ const isShown = (ion, filter) => filter === "all" || (filter === "cation" ? ION[
 class MixView {
   constructor(el, o) {
     this.el = el; this.o = Object.assign({ unit: "", filter: "all", btb: false, sym: null, showTable: true, perVol: false, water: true }, o);
-    this.state = "before"; this.useSym = !!o.sym; this.filter = this.o.filter; this.btb = this.o.btb;
+    this.state = o.startAfter ? "after" : "before"; this.useSym = !!o.sym; this.filter = this.o.filter; this.btb = this.o.btb;
     this.build();
   }
   build() {
@@ -315,14 +315,14 @@ const symLabel = k => ({ tri: "△", ftri: "▲", sq: "□", fsq: "■", circ: "
 /* ---------------- 그래프 ---------------- */
 class Plot {
   constructor(parent, w = 560, hh = 300) { this.ctx = mkCanvas(parent, w, hh); this.pad = { l: 52, r: 16, t: 16, b: 42 }; }
-  frame(xmin, xmax, ymin, ymax, xl, yl, xt) {
+  frame(xmin, xmax, ymin, ymax, xl, yl, xt, xlab) {
     const c = this.ctx, p = this.pad; c.clearRect(0, 0, c.W, c.H);
     this.X = x => p.l + (x - xmin) / (xmax - xmin) * (c.W - p.l - p.r);
     this.Y = y => c.H - p.b - (y - ymin) / (ymax - ymin) * (c.H - p.t - p.b);
     c.strokeStyle = "#1d2530"; c.lineWidth = 1.2; c.beginPath(); c.moveTo(p.l, p.t); c.lineTo(p.l, c.H - p.b); c.lineTo(c.W - p.r, c.H - p.b); c.stroke();
     c.fillStyle = "#5d6878"; c.font = "12px Noto Sans KR, sans-serif"; c.textAlign = "center"; c.fillText(xl, (p.l + c.W - p.r) / 2, c.H - 8);
     c.save(); c.translate(14, (p.t + c.H - p.b) / 2); c.rotate(-Math.PI / 2); c.fillText(yl, 0, 0); c.restore();
-    (xt || []).forEach(v => { c.fillStyle = "#5d6878"; c.fillText(frac(v), this.X(v), c.H - p.b + 15); c.strokeStyle = "#e3e8ee"; c.beginPath(); c.moveTo(this.X(v), p.t); c.lineTo(this.X(v), c.H - p.b); c.stroke(); });
+    (xt || []).forEach(v => { c.fillStyle = "#5d6878"; c.fillText(xlab && xlab[v] != null ? xlab[v] : frac(v), this.X(v), c.H - p.b + 15); c.strokeStyle = "#e3e8ee"; c.beginPath(); c.moveTo(this.X(v), p.t); c.lineTo(this.X(v), c.H - p.b); c.stroke(); });
   }
   line(pts, color, dash, w = 2) { const c = this.ctx; c.save(); c.strokeStyle = color; c.lineWidth = w; c.setLineDash(dash || []); c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(this.X(q[0]), this.Y(q[1])) : c.moveTo(this.X(q[0]), this.Y(q[1]))); c.stroke(); c.restore(); }
   dot(x, y, color, label) { const c = this.ctx; c.fillStyle = color; c.beginPath(); c.arc(this.X(x), this.Y(y), 4, 0, Math.PI * 2); c.fill(); if (label) { c.fillStyle = "#1d2530"; c.font = "700 12px Noto Sans KR, sans-serif"; c.textAlign = "center"; c.fillText(label, this.X(x), this.Y(y) - 9); } }
@@ -391,7 +391,7 @@ class TempView {
       <div class="note">생성된 물 분자 수가 많을수록 중화열이 많이 발생해요. 첨가 실험에서 중화점 이후에는 물이 더 생기지 않고, 차가운 염기 수용액이 섞여 온도가 내려가요.</div>`;
     this.mixEl.append(pan);
     const mv = h("div"); this.mixEl.append(mv);
-    new MixView(mv, { mixes: [{ label: "혼합 용액", parts: r.parts }], unit: u, showTable: false, btb: true });
+    new MixView(mv, { mixes: [{ label: "혼합 용액", parts: r.parts }], unit: u, showTable: false, btb: true, startAfter: true });
   }
 }
 
@@ -437,6 +437,59 @@ class PerVolView {
       <table class="t"><tr><th>이온</th><th>이온 수</th><th>단위 부피당</th></tr>${Object.keys(r.after).filter(k => r.after[k] > EPS).map(k => `<tr><td>${ION[k].l}</td><td>${fmt(r.after[k], u)}</td><td>${fmt(r.after[k] / r.vol, u)}</td></tr>`).join("")}
       <tr class="sum"><td>전체</td><td>${fmt(r.totalAfter, u)}</td><td>${fmt(r.totalAfter / r.vol, u)}</td></tr></table>
       <div class="note">액성 ${liqBadge(r.liq)} · 이온 수 = 단위 부피당 이온 수 × 전체 부피(처음 용액 ${o.acid.vol} mL 포함!)</div></div>`;
+  }
+}
+
+/* ---------------- 이온 수 그래프 (첨가 실험) ---------------- */
+class CountView {
+  constructor(el, o) { this.el = el; this.o = Object.assign({ unit: "", names: {}, marks: [] }, o); this.v = o.start != null ? o.start : o.max / 2; this.build(); }
+  at(v) { const o = this.o; return mix([{ s: o.init.s, vol: o.init.vol || 10, n: o.init.n }, { s: o.add.s, vol: v, n: o.add.conc * v }]); }
+  ions() { const r = this.at(this.o.max); const ks = Object.keys(r.after); const rank = k => k === "H" || k === "OH" ? 1 : 0; return ks.sort((a, b) => (SOL[this.o.init.s].ion === a ? -1 : 0) - (SOL[this.o.init.s].ion === b ? -1 : 0) || rank(a) - rank(b)); }
+  build() {
+    const o = this.o; this.el.innerHTML = "";
+    this.ctl = h("div", { class: "ctrls" }); this.el.append(this.ctl);
+    this.hideNames = Object.keys(o.names).length > 0;
+    const keys = this.ions().concat(["total", "cation", "anion"]);
+    this.on = new Set(o.series || this.ions());
+    keys.forEach(k => { const t = h("label", { class: "toggle" }, `<input type="checkbox" ${this.on.has(k) ? "checked" : ""}> ${this.nameOf(k, true)}`); t.querySelector("input").onchange = e => { e.target.checked ? this.on.add(k) : this.on.delete(k); this.draw(); }; this.ctl.append(t); });
+    if (this.hideNames) { const t = h("label", { class: "toggle" }, `<input type="checkbox"> 이온 정체 보기`); t.querySelector("input").onchange = e => { this.hideNames = !e.target.checked; this.draw(); }; this.ctl.append(t); }
+    const lab = h("span", { class: "ctrl" }, `<label>넣어 준 ${SOL[o.add.s].n} 부피</label>`);
+    const rg = h("input", { type: "range", min: 0, max: o.max, step: 0.5, value: this.v }); this.out = h("b");
+    rg.oninput = () => { this.v = +rg.value; this.draw(); }; lab.append(rg, this.out);
+    const cols = h("div", { class: "cols" }); this.el.append(cols);
+    const left = h("div"); this.side = h("div"); cols.append(left, this.side);
+    left.append(lab); this.plot = new Plot(left, 520, 320);
+    this.draw();
+  }
+  nameOf(k, forToggle) {
+    const base = { total: "전체 이온", cation: "양이온 전체", anion: "음이온 전체" }[k] || ION[k].l;
+    const nm = this.o.names[k];
+    if (!nm) return base;
+    return this.hideNames ? nm : `${nm} = ${base}`;
+  }
+  val(k, r) { return k === "total" ? r.totalAfter : k === "cation" ? r.catAfter : k === "anion" ? r.anAfter : (r.after[k] || 0); }
+  draw() {
+    const o = this.o, P = this.plot, u = o.unit, N = 240;
+    this.out.textContent = ` ${frac(this.v)} mL`;
+    const pal = ["#1d2530", "#c0392b", "#2a6fb0", "#8e44ad", "#1c7c74", "#b8860b"];
+    const keys = [...this.on]; let ymax = 0; const data = {};
+    keys.forEach(k => { data[k] = []; for (let i = 0; i <= N; i++) { const v = o.max * i / N, y = this.val(k, this.at(v)); data[k].push([v, y]); ymax = Math.max(ymax, y); } });
+    P.frame(0, o.max, 0, ymax * 1.12 || 1, `넣어 준 ${SOL[o.add.s].n.replace(/<[^>]+>/g, "")} 수용액의 부피(mL)`, `이온 수${u ? " (" + u + ")" : ""}`, o.ticks || [0, o.max], o.tickLabels);
+    const vn = o.init.n * SOL[o.init.s].v / (o.add.conc * SOL[o.add.s].v);
+    if (vn <= o.max) { P.vline(vn, "#b23a3a"); P.text(vn, ymax * 1.07, "중화점", "#b23a3a", "center"); }
+    const all = this.ions().concat(["total", "cation", "anion"]);
+    keys.forEach(k => { const col = pal[all.indexOf(k) % pal.length]; const dash = k === "H" || k === "OH" ? [6, 4] : null; P.line(data[k], col, dash, k === "total" ? 2.6 : 2); const last = data[k][N]; P.text(o.max, last[1] + (ymax * .02), this.nameOf(k).split(" = ")[0], col, "right"); });
+    (o.marks || []).forEach(([v, l, k]) => { const r = this.at(v); const y = k ? this.val(k, r) : 0; P.dot(v, y, "#1d2530", l); });
+    P.vline(this.v, "#9aa7b5");
+    const r = this.at(this.v);
+    const rows = this.ions().map(k => `<tr><td>${this.nameOf(k)}</td><td>${fmt(r.after[k] || 0, u)}</td></tr>`).join("");
+    this.side.innerHTML = `<div class="panel"><h3>${SOL[o.init.s].n} + ${SOL[o.add.s].n} ${frac(this.v)} mL</h3>
+      <table class="t"><tr><th>이온</th><th>이온 수</th></tr>${rows}
+      <tr class="sum"><td>양이온 / 음이온</td><td>${fmt(r.catAfter, u)} / ${fmt(r.anAfter, u)}</td></tr>
+      <tr class="sum"><td>전체 이온 수</td><td>${fmt(r.totalAfter, u)}</td></tr></table>
+      <div class="note">액성 ${liqBadge(r.liq)} · 생성된 물 ${fmt(r.water, u)}</div></div>`;
+    const mv = h("div"); this.side.append(mv);
+    new MixView(mv, { mixes: [{ label: "혼합 용액", parts: r.parts, desc: `${frac(this.v)} mL 넣었을 때` }], unit: u, showTable: false, btb: true, startAfter: true });
   }
 }
 
@@ -600,6 +653,7 @@ const TYPES = [
   { id: "B2", grp: "basic", k: "기본 유형 2", t: "중화 반응 개괄", d: "H⁺ + OH⁻ → H₂O, 알짜·구경꾼 이온, 액성" },
   { id: "B3", grp: "basic", k: "기본 유형 3", t: "이온 모형 분석", d: "10 mL씩 넣을 때 기호 모형 읽기" },
   { id: "B4", grp: "basic", k: "기본 유형 4", t: "온도 변화 그래프", d: "중화열과 중화점, 두 가지 그래프" },
+  { id: "B5", grp: "basic", k: "기본 유형 5", t: "이온 수 그래프", d: "일정·감소·증가·중화점 뒤 증가, 선 4개의 정체" },
   { id: "H1", grp: "adv", k: "심화 유형 1", t: "물의 수와 이온 수", d: "과량은 이온 수, 소량은 물의 수" },
   { id: "H2", grp: "adv", k: "심화 유형 2", t: "이온의 종류 수로 액성 판단", d: "n개 용액 → 최소 n가지, n+1가지면 산성 또는 염기성" },
   { id: "H3", grp: "adv", k: "심화 유형 3", t: "2가 산 · 2가 염기", d: "한계 반응물이 2가면 구경꾼 수만큼 빼기" },
@@ -665,6 +719,16 @@ const BASIC = {
     draw();
     panel(el, "꼭 기억할 것", "tip").innerHTML += `<div class="ptext"><ul><li>생성된 물 분자 수가 많을수록 중화열이 많이 발생해요.</li><li>전체 부피가 같으면 <b>최고 온도 순서 = 생성된 물 분자 수 순서</b>, 꼭짓점이 중화점이에요.</li><li>첨가 실험은 중화점까지 온도가 올라가고, 중화점 이후에는 내려가요.</li></ul></div>`;
   },
+  B5(el) {
+    const st = { init: "NaOH", n: 4, add: "HCl", c: 2 };
+    const p = panel(el, "넣어 준 부피에 따른 이온 수");
+    const c = h("div", { class: "ctrls" }); p.append(c); const box = h("div"); p.append(box);
+    const draw = () => { const vn = st.n * SOL[st.init].v / (st.c / 10 * SOL[st.add].v); const max = Math.min(80, Math.ceil(vn * 1.6 / 5) * 5); new CountView(box, { init: { s: st.init, n: st.n }, add: { s: st.add, conc: st.c / 10 }, max, ticks: [0, vn, max].filter((x, i, a) => a.indexOf(x) === i), start: vn / 2 }); };
+    c.append(h("span", { class: "ctrl" }, "<label>처음 용액</label>"), selectEl(["NaOH", "KOH", "CaOH2", "HCl", "HNO3", "H2SO4"], st.init, v => { st.init = v; st.add = SOL[v].t === "b" ? "HCl" : "NaOH"; draw(); }),
+      stepper("처음 용액 속 입자 수", st.n, 1, 6, v => { st.n = v; draw(); }), stepper("넣는 용액 10 mL 속 입자 수", st.c, 1, 6, v => { st.c = v; draw(); }));
+    draw();
+    panel(el, "선 읽는 법", "tip").innerHTML += `<div class="ptext"><ul><li><b>일정</b> = 처음 용액의 구경꾼 이온, <b>감소해 0</b> = 처음 용액의 알짜 이온</li><li><b>0에서 계속 증가</b> = 넣는 용액의 구경꾼 이온, <b>중화점 뒤 증가</b> = 넣는 용액의 알짜 이온</li><li>알짜 이온이 0이 되는 점이 중화점, 처음 값의 비(알짜 : 구경꾼)가 가수예요.</li><li>'전체 이온'을 켜 보세요. 넣는 용액이 1가면 중화점까지 일정해요.</li></ul></div>`;
+  },
   H1(el) {
     const st = { va: 20, ca: 2, vb: 30, cb: 2 };
     const p = panel(el, "과량은 이온 수, 소량은 물의 수 (1가 산 + 1가 염기)");
@@ -729,7 +793,7 @@ const BASIC = {
 function renderPreset(pv, pr) {
   pv.innerHTML = "";
   const head = panel(pv, `${pr.o ? "DCAF " : "유사 "}${pr.no}`, "prob");
-  head.querySelector("h3").innerHTML = `<span class="chip ${pr.o ? "red" : ""}">${pr.o ? "DCAF " + pr.no : "유사 " + pr.no}</span> ${pr.title || ""}`;
+  head.querySelector("h3").innerHTML = `<span class="chip ${pr.o ? "red" : ""}">${pr.o ? (pr.src || "DCAF") + " " + pr.no : "유사 " + pr.no}</span> ${pr.title || ""}`;
   head.append(h("div", { class: "ptext" }, pr.text || ""));
   if (pr.hint) { const d = h("details", { class: "hint" }); d.innerHTML = `<summary>풀이 단서 보기</summary><ol>${pr.hint.map(x => `<li>${x}</li>`).join("")}</ol>`; head.append(d); }
   (pr.views || []).forEach(v => {
@@ -738,6 +802,7 @@ function renderPreset(pv, pr) {
     else if (v.k === "tit") new TitView(box, Object.assign({ unit: pr.unit || "" }, v));
     else if (v.k === "temp") new TempView(box, Object.assign({ unit: pr.unit || "" }, v));
     else if (v.k === "pervol") new PerVolView(box, Object.assign({ unit: pr.unit || "" }, v));
+    else if (v.k === "count") new CountView(box, Object.assign({ unit: pr.unit || "" }, v));
     else if (v.k === "box") new BoxView(box, Object.assign({ unit: pr.unit || "" }, v));
     else if (v.k === "litmus") new LitmusView(box, v);
     else if (v.k === "ind") new IndicatorView(box, v);
