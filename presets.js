@@ -241,6 +241,18 @@
     text: "H₂SO₄ 수용액에 NaOH 수용액을 넣을 때 이온의 상대적인 수 그래프예요. 일정한 선은 1, 감소하는 선은 2에서 시작해 b에서 0이 돼요.",
     hint: ["일정 = SO₄²⁻, 감소 = H⁺ (2 : 1 → 2가 산), 원점에서 증가하는 (가) = Na⁺.", "a : SO₄²⁻ 1, H⁺ 1, Na⁺ 1.", "c : 양이온 Na⁺ 3, 음이온 SO₄²⁻ 1 + OH⁻ 1 = 2."],
     views: [{ k: "count", title: "이온의 상대적인 수", init: { s: "H2SO4", n: 1 }, add: { s: "NaOH", conc: .1 }, max: 36, ticks: [0, 10, 20, 30], tickLabels: { 10: "a", 20: "b", 30: "c" }, names: { Na: "(가)" }, start: 30 }] });
+  add({ type: "H3", code: "sd3", o: true, src: "성동고 기출", no: "서답형 3", title: "H₂SO₄ 10 mL + NaOH 20 mL의 이온 모형",
+    text: "황산 10 mL와 수산화 나트륨 수용액 20 mL의 혼합 용액 모형이에요. △ 5개, ● 2개, ○ 1개가 있어요.",
+    hint: ["전하 균형 : △ = Na⁺(+1)이면 양전하 5 = ● 2개 × 2 + ○ 1개 × 1.", "● = SO₄²⁻, ○ = OH⁻ → 음이온은 ●, ○.", "H₂SO₄ 10 mL의 H⁺ 4개, NaOH 1 mL당 OH⁻ 0.25개 → 25 mL(H⁺ 10개)에는 40 mL."],
+    views: [{ k: "mix", title: "혼합 용액 (기호 모형을 끄면 이온 이름이 보여요)", mixes: [M("혼합 용액", [p("H2SO4", 10, 2), p("NaOH", 20, 5)])], sym: { Na: "tri", SO4: "fcirc", OH: "circ", H: "sq" }, startAfter: true }] });
+  add({ type: "H3", code: "h3-7", no: "심화 3-7", title: "Ca(OH)₂ 10 mL + HCl 20 mL의 이온 모형",
+    text: "수산화 칼슘 수용액 10 mL와 묽은 염산 20 mL의 혼합 용액 모형이에요. △ 6개, ● 2개, ○ 2개가 있어요.",
+    hint: ["가장 많은 △ = Cl⁻(1가 구경꾼).", "음전하 6 = ● 2개 × 2 + ○ 2개 × 1 → ● = Ca²⁺, ○ = H⁺ (산성).", "Ca(OH)₂ 30 mL의 OH⁻ 12개 ÷ HCl 1 mL당 0.3개 = 40 mL."],
+    views: [{ k: "mix", title: "혼합 용액", mixes: [M("혼합 용액", [p("CaOH2", 10, 2), p("HCl", 20, 6)])], sym: { Cl: "tri", Ca: "fcirc", H: "circ", OH: "sq" }, startAfter: true }] });
+  add({ type: "H3", code: "h3-8", no: "심화 3-8", title: "H₂A 20 mL + KOH 15 mL의 이온 모형",
+    text: "H₂A 수용액 20 mL와 KOH 수용액 15 mL의 혼합 용액 모형이에요. △ 3개, ● 2개, ○ 1개가 있어요.",
+    hint: ["△ = K⁺이면 양전하 3 + ○ 1 = 4 = ● 2개 × 2.", "△ = K⁺, ● = A²⁻, ○ = H⁺.", "H₂A 10 mL의 H⁺ 2개 ÷ KOH 1 mL당 0.2개 = 10 mL."],
+    views: [{ k: "mix", title: "혼합 용액", mixes: [M("혼합 용액", [p("H2A", 20, 2), p("KOH", 15, 3)])], sym: { K: "tri", A2: "fcirc", H: "circ", OH: "sq" }, startAfter: true }] });
 
   /* ===================== 심화 유형 4 (단위 부피당) ===================== */
   add({ type: "H4", code: "290", o: true, no: "290", title: "단위 부피당 Na⁺ · Cl⁻ 수",
